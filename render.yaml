@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: tiktok-api-prod
+    env: node
+    plan: starter
+    buildCommand: "npm ci"
+    startCommand: "node src/server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CF_ACCOUNT_ID
+        sync: false
+      - key: CF_STREAM_TOKEN
+        sync: false
+      - key: CF_STREAM_WEBHOOK_SECRET
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_AVATARS_BUCKET
+        sync: false
+      - key: S3_COVERS_BUCKET
+        sync: false
+      - key: S3_CHAT_MEDIA_BUCKET
+        sync: false
+      - key: CDN_DOMAIN
+        sync: false
