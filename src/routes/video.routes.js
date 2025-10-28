@@ -9,6 +9,7 @@ const r = Router();
 r.post('/upload', requireAuth, async (req, res, next) => {
   try {
     const { description = '', hashtags = [], privacy_settings = {}, video_url, stream_uid } = req.body;
+    console.log('Video upload', { user: req.user.sub, video_url, stream_uid });
     const sDesc = sanitizeText(description);
     const tagDocs = [];
     for (const t of hashtags) {
