@@ -20,7 +20,7 @@ import reportRoutes from './routes/report.routes.js';
 import storageRoutes from './routes/storage.routes.js';
 
 const corsHeaders = {
-    origin: '*', // no usar credentials con '*'
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Type'],
