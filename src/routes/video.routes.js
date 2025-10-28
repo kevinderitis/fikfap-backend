@@ -8,7 +8,7 @@ const r = Router();
 
 r.post('/upload', requireAuth, async (req, res, next) => {
   try {
-    const { description='', hashtags=[], privacy_settings={} } = req.body;
+    const { description = '', hashtags = [], privacy_settings = {}, video_url, stream_uid } = req.body;
     const sDesc = sanitizeText(description);
     const tagDocs = [];
     for (const t of hashtags) {
@@ -16,12 +16,14 @@ r.post('/upload', requireAuth, async (req, res, next) => {
       let doc = await Hashtag.findOneAndUpdate({ name }, { $setOnInsert: { name } }, { new: true, upsert: true });
       tagDocs.push(doc._id);
     }
-    const v = await Video.create({ user_id: req.user.sub, description: sDesc, hashtags: tagDocs, privacy: {
-      is_private: !!privacy_settings?.is_private,
-      allow_comments: privacy_settings?.allow_comments ?? true,
-      allow_duet: privacy_settings?.allow_duet ?? true,
-      allow_stitch: privacy_settings?.allow_stitch ?? true
-    }});
+    const v = await Video.create({
+      user_id: req.user.sub, video_url, streamId: stream_uid, description: sDesc, hashtags: tagDocs, privacy: {
+        is_private: !!privacy_settings?.is_private,
+        allow_comments: privacy_settings?.allow_comments ?? true,
+        allow_duet: privacy_settings?.allow_duet ?? true,
+        allow_stitch: privacy_settings?.allow_stitch ?? true
+      }
+    });
     res.json({ video: v });
   } catch (e) { next(e); }
 });
