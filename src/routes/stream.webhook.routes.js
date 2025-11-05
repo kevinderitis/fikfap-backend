@@ -12,10 +12,10 @@ r.post('/webhooks/stream', express.raw({ type: 'application/json' }), async (req
     req.rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || '');
 
     // validar firma
-    if (!verifyStreamSignature(req)) {
-      console.log('[STREAM] invalid signature');
-      return res.status(401).json({ ok: false });
-    }
+    // if (!verifyStreamSignature(req)) {
+    //   console.log('[STREAM] invalid signature');
+    //   return res.status(401).json({ ok: false });
+    // }
 
     // parsear JSON del raw body
     let payload = {};
