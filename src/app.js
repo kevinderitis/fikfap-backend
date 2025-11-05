@@ -18,6 +18,7 @@ import chatRoutes from './routes/chat.routes.js';
 import notifRoutes from './routes/notif.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import storageRoutes from './routes/storage.routes.js';
+import streamWebhookRoutes from './routes/stream.webhook.routes.js';
 
 const corsHeaders = {
     origin: '*',
@@ -37,6 +38,7 @@ app.options('*', cors(corsHeaders));
 app.use(express.json({ limit: '5mb' }));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
+app.use('/_internal', streamWebhookRoutes);
 
 app.use('/auth', authLimiter, authRoutes);
 app.use('/profile', profileRoutes);
