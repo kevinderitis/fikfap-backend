@@ -29,6 +29,7 @@ const corsHeaders = {
 };
 
 const app = express();
+app.use('/_internal', streamWebhookRoutes);
 app.use(helmet());
 app.use(hpp());
 app.use(compression());
@@ -38,7 +39,6 @@ app.options('*', cors(corsHeaders));
 app.use(express.json({ limit: '5mb' }));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
-app.use('/_internal', streamWebhookRoutes);
 
 app.use('/auth', authLimiter, authRoutes);
 app.use('/profile', profileRoutes);
