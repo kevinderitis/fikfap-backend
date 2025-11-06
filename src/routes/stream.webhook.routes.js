@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import express from 'express';
 import { verifyStreamSignature } from '../utils/verifyStreamSignature.js';
-// import Video from '../models/Video.js'; // si ya lo tenés
+import Video from '../models/Video.js';
 
 const r = Router();
 
