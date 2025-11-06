@@ -18,7 +18,7 @@ r.post('/upload', requireAuth, async (req, res, next) => {
       tagDocs.push(doc._id);
     }
     const v = await Video.create({
-      user_id: req.user.sub, video_url, streamId: stream_uid, description: sDesc, hashtags: tagDocs, privacy: {
+      user_id: req.user.sub, video_url, stream_uid, description: sDesc, hashtags: tagDocs, privacy: {
         is_private: !!privacy_settings?.is_private,
         allow_comments: privacy_settings?.allow_comments ?? true,
         allow_duet: privacy_settings?.allow_duet ?? true,
