@@ -29,18 +29,18 @@ r.post('/webhooks/stream', express.raw({ type: 'application/json' }), async (req
 
         console.log('[STREAM] webhook:', { uid, state, duration });
 
-        if (uid && state === 'ready') {
-            try {
-                // 1️⃣ Aplicar políticas públicas (sin validaciones)
-                await setVideoPublic(uid, ['*']);
-            } catch (err) {
-                // algunos tenants no aceptan ["*"], probamos con []
-                console.warn('[STREAM] ⚠️ No aceptó ["*"], reintentando con []');
-                try { await setVideoPublic(uid, []); } catch (e2) {
-                    console.error('[STREAM] ❌ Falló ambos PATCH:', e2?.message || e2);
-                }
-            }
-        }
+        // if (uid && state === 'ready') {
+        //     try {
+        //         // 1️⃣ Aplicar políticas públicas (sin validaciones)
+        //         await setVideoPublic(uid, ['*']);
+        //     } catch (err) {
+        //         // algunos tenants no aceptan ["*"], probamos con []
+        //         console.warn('[STREAM] ⚠️ No aceptó ["*"], reintentando con []');
+        //         try { await setVideoPublic(uid, []); } catch (e2) {
+        //             console.error('[STREAM] ❌ Falló ambos PATCH:', e2?.message || e2);
+        //         }
+        //     }
+        // }
         // Actualizá tu video si corresponde
         await Video.findOneAndUpdate(
             { stream_uid: uid },
