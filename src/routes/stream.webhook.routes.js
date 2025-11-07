@@ -40,27 +40,27 @@ r.post('/webhooks/stream', express.raw({ type: 'application/json' }), async (req
                     console.error('[STREAM] ❌ Falló ambos PATCH:', e2?.message || e2);
                 }
             }
-
-            // Actualizá tu video si corresponde
-            await Video.findOneAndUpdate(
-                { stream_uid: uid },
-                {
-                    $set: {
-                        status: 'ready',
-                        player_url: `https://iframe.videodelivery.net/${uid}`,
-                        thumbnail_url: `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`,
-                        video_url: `https://videodelivery.net/${uid}/manifest/video.m3u8`, // opcional
-                        duration: payload.duration || 0
-                    }
-                },
-                { new: true }
-            );
-
-            return res.status(200).json({ ok: true });
-        } catch (e) {
-            console.error('[STREAM] webhook error:', e);
-            return res.status(500).json({ ok: false });
         }
-    });
+        // Actualizá tu video si corresponde
+        await Video.findOneAndUpdate(
+            { stream_uid: uid },
+            {
+                $set: {
+                    status: 'ready',
+                    player_url: `https://iframe.videodelivery.net/${uid}`,
+                    thumbnail_url: `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`,
+                    video_url: `https://videodelivery.net/${uid}/manifest/video.m3u8`, // opcional
+                    duration: payload.duration || 0
+                }
+            },
+            { new: true }
+        );
+
+        return res.status(200).json({ ok: true });
+    } catch (e) {
+        console.error('[STREAM] webhook error:', e);
+        return res.status(500).json({ ok: false });
+    }
+});
 
 export default r;
