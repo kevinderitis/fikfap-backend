@@ -4,6 +4,7 @@ import Profile from '../models/Profile.js';
 import Video from '../models/Video.js';
 import Follow from '../models/Follow.js';
 import UserBlock from '../models/UserBlock.js';
+import mongoose from 'mongoose';
 
 const r = Router();
 
