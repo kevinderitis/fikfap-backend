@@ -14,8 +14,8 @@ r.post('/:id/like', requireAuth, async (req, res, next) => {
     const liked = await Like.findOne({ user_id: req.user.sub, stream_uid });
     if (liked) return res.json({ liked: true });
     await Like.create({ user_id: req.user.sub, video_id });
-    await Video.updateOne({ _id: video_id }, { $inc: { likes_count: 1 } });
-    const v = await Video.findById(video_id);
+    await Video.updateOne({ stream_uid }, { $inc: { likes_count: 1 } });
+    const v = await Video.findOne({ stream_uid });
     res.json({ liked: true, likesCount: v?.likes_count || 0 });
   } catch (e) { next(e); }
 });
@@ -24,8 +24,8 @@ r.delete('/:id/like', requireAuth, async (req, res, next) => {
   try {
     const stream_uid = req.params.id;
     const out = await Like.deleteOne({ user_id: req.user.sub, stream_uid });
-    if (out.deletedCount) await Video.updateOne({ _id: video_id }, { $inc: { likes_count: -1 } });
-    const v = await Video.findById(video_id);
+    if (out.deletedCount) await Video.updateOne({ stream_uid }, { $inc: { likes_count: -1 } });
+    const v = await Video.findOne({ stream_uid });
     res.json({ liked: false, likesCount: v?.likes_count || 0 });
   } catch (e) { next(e); }
 });

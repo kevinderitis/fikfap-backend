@@ -20,6 +20,20 @@ r.get('/:username', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+r.get('/id/:user_id', async (req, res, next) => {
+  try {
+    const profile = await Profile.findOne({ userId: req.params.user_id });
+    console.log(profile);
+    if (!profile) return res.status(404).json({ error: 'Not found' });
+    let isFollowing = false, isBlocked = false;
+    if (req.user?.sub) {
+      isFollowing = !!await Follow.findOne({ follower_id: req.user.sub, following_id: profile._id });
+      isBlocked = !!await UserBlock.findOne({ blocker_id: profile._id, blocked_id: req.user.sub });
+    }
+    res.json({ profile, isFollowing, isBlocked });
+  } catch (e) { next(e); }
+});
+
 r.put('/', requireAuth, async (req, res, next) => {
   try {
     const { full_name, bio, website, avatar_url, cover_image_url } = req.body;

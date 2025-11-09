@@ -10,6 +10,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 import authRoutes from './routes/auth.routes.js';
 import profileRoutes from './routes/profile.routes.js';
+import userRoutes from './routes/user.routes.js';
 import videoRoutes from './routes/video.routes.js';
 import interactionRoutes from './routes/interaction.routes.js';
 import commentRoutes from './routes/comment.routes.js';
@@ -85,6 +86,7 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.use('/auth', authLimiter, authRoutes);
 app.use('/profile', profileRoutes);
+app.use('/users', userRoutes);
 app.use('/videos', writeLimiter, videoRoutes);
 app.use('/videos', writeLimiter, interactionRoutes);
 app.use('/', writeLimiter, commentRoutes);

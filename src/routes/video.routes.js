@@ -29,6 +29,37 @@ r.post('/upload', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+r.get('/following', requireAuth, async (req, res, next) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+    const userId = req.user.sub;
+
+    // Importar el modelo Follow (añade esto al inicio del archivo si no existe)
+    // import Follow from '../models/Follow.js';
+    const Follow = (await import('../models/Follow.js')).default;
+
+    // Obtener IDs de usuarios que sigue
+    const follows = await Follow.find({ follower_id: userId }).select('following_id');
+    const followingIds = follows.map(f => f.following_id);
+
+    // Si no sigue a nadie, retornar array vacío
+    if (followingIds.length === 0) {
+      return res.json({ videos: [], nextCursor: null });
+    }
+
+    // Obtener videos de usuarios seguidos
+    const videos = await Video.find({
+      user_id: { $in: followingIds },
+      'privacy.is_private': false
+    })
+      .sort({ created_at: -1 })
+      .limit(limit);
+
+    res.json({ videos, nextCursor: null });
+  } catch (e) { next(e); }
+});
+
+
 r.get('/feed', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
