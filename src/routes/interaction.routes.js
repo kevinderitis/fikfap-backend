@@ -13,7 +13,7 @@ r.post('/:id/like', requireAuth, async (req, res, next) => {
     const stream_uid = req.params.id;
     const liked = await Like.findOne({ user_id: req.user.sub, stream_uid });
     if (liked) return res.json({ liked: true });
-    await Like.create({ user_id: req.user.sub, video_id });
+    await Like.create({ user_id: req.user.sub, video_id: stream_uid });
     await Video.updateOne({ stream_uid }, { $inc: { likes_count: 1 } });
     const v = await Video.findOne({ stream_uid });
     res.json({ liked: true, likesCount: v?.likes_count || 0 });
@@ -33,7 +33,7 @@ r.delete('/:id/like', requireAuth, async (req, res, next) => {
 r.post('/:id/bookmark', requireAuth, async (req, res, next) => {
   try {
     const stream_uid = req.params.id;
-    await Bookmark.updateOne({ user_id: req.user.sub, stream_uid }, { $setOnInsert: { user_id: req.user.sub, video_id } }, { upsert: true });
+    await Bookmark.updateOne({ user_id: req.user.sub, stream_uid }, { $setOnInsert: { user_id: req.user.sub, video_id: stream_uid } }, { upsert: true });
     res.json({ bookmarked: true });
   } catch (e) { next(e); }
 });
