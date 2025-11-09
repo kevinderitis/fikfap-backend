@@ -24,23 +24,34 @@ r.get('/:username', async (req, res, next) => {
 r.get('/id/:user_id', async (req, res, next) => {
   try {
     const { user_id } = req.params;
-    const id = mongoose.Types.ObjectId.isValid(user_id) ? new mongoose.Types.ObjectId(user_id) : user_id;
 
-    const profile = await Profile.findOne({ userId: id });
-    if (!profile) return res.status(404).json({ error: 'Not found' });
+    // Verificamos que sea un ObjectId válido
+    if (!mongoose.Types.ObjectId.isValid(user_id)) {
+      return res.status(400).json({ error: 'Invalid user_id' });
+    }
 
-    let isFollowing = false, isBlocked = false;
+    // Buscamos el perfil por el campo userId
+    const profile = await Profile.findOne({ userId: new mongoose.Types.ObjectId(user_id) });
+    if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+    // Calculamos follow y block en paralelo (más eficiente)
+    let isFollowing = false;
+    let isBlocked = false;
 
     if (req.user?.sub) {
-      isFollowing = !!await Follow.findOne({
-        follower_id: req.user.sub,
-        following_id: profile._id
-      });
+      const [followDoc, blockDoc] = await Promise.all([
+        Follow.findOne({
+          follower_id: req.user.sub,
+          following_id: profile._id,
+        }),
+        UserBlock.findOne({
+          blocker_id: profile._id,
+          blocked_id: req.user.sub,
+        }),
+      ]);
 
-      isBlocked = !!await UserBlock.findOne({
-        blocker_id: profile._id,
-        blocked_id: req.user.sub
-      });
+      isFollowing = !!followDoc;
+      isBlocked = !!blockDoc;
     }
 
     res.json({ profile, isFollowing, isBlocked });
