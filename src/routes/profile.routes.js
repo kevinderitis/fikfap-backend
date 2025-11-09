@@ -29,7 +29,7 @@ r.get('/id/:user_id', async (req, res, next) => {
     if (!mongoose.Types.ObjectId.isValid(user_id)) {
       return res.status(400).json({ error: 'Invalid user_id' });
     }
-
+    console.log('Fetching profile for user_id:', user_id);
     // Buscamos el perfil por el campo userId
     const profile = await Profile.findOne({ userId: new mongoose.Types.ObjectId(user_id) });
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
