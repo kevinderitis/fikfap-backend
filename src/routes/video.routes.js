@@ -63,17 +63,49 @@ r.get('/following', requireAuth, async (req, res, next) => {
 r.get('/feed', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
-    const videos = await Video.find({ 'privacy.is_private': false }).sort({ created_at: -1 }).limit(limit);
+
+    const videos = await Video.find({ 'privacy.is_private': false })
+      .sort({ created_at: -1 })
+      .limit(limit)
+      .populate({
+        path: 'user_id',
+        select: 'username full_name avatar_url is_verified', // campos que querés traer del perfil
+      })
+      .lean();
+
     res.json({ videos, nextCursor: null });
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('[FEED] error:', e);
+    next(e);
+  }
 });
+
+// r.get('/for-you', async (req, res, next) => {
+//   try {
+//     const limit = Math.min(Number(req.query.limit) || 20, 50);
+//     const videos = await Video.find({ 'privacy.is_private': false }).sort({ created_at: -1 }).limit(limit);
+//     res.json({ videos, nextCursor: null });
+//   } catch (e) { next(e); }
+// });
 
 r.get('/for-you', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
-    const videos = await Video.find({ 'privacy.is_private': false }).sort({ created_at: -1 }).limit(limit);
+
+    const videos = await Video.find({ 'privacy.is_private': false })
+      .sort({ created_at: -1 })
+      .limit(limit)
+      .populate({
+        path: 'user_id',
+        select: 'username full_name avatar_url is_verified', // campos que querés traer del perfil
+      })
+      .lean(); // opcional, hace el resultado más liviano y rápido
+
     res.json({ videos, nextCursor: null });
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('[FEED] error:', e);
+    next(e);
+  }
 });
 
 r.get('/trending', async (req, res, next) => {
