@@ -24,7 +24,7 @@ r.get('/:username', async (req, res, next) => {
 r.get('/id/:profile_id', async (req, res, next) => {
   try {
     const { profile_id } = req.params;
-
+    console.log('[PROFILE] requested profile_id:', profile_id);
     // Validar y convertir a ObjectId
     if (!mongoose.Types.ObjectId.isValid(profile_id)) {
       return res.status(400).json({ error: 'Invalid profile_id' });
