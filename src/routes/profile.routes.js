@@ -21,20 +21,23 @@ r.get('/:username', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-r.get('/id/:user_id', async (req, res, next) => {
+r.get('/id/:profile_id', async (req, res, next) => {
   try {
-    const { user_id } = req.params;
+    const { profile_id } = req.params;
 
-    // Verificamos que sea un ObjectId válido
-    if (!mongoose.Types.ObjectId.isValid(user_id)) {
-      return res.status(400).json({ error: 'Invalid user_id' });
+    // Validar y convertir a ObjectId
+    if (!mongoose.Types.ObjectId.isValid(profile_id)) {
+      return res.status(400).json({ error: 'Invalid profile_id' });
     }
-    console.log('Fetching profile for user_id:', user_id);
-    // Buscamos el perfil por el campo userId
-    const profile = await Profile.findOne({ userId: new mongoose.Types.ObjectId(user_id) });
+
+    const objId = new mongoose.Types.ObjectId(profile_id);
+    console.log('[PROFILE] fetching by _id:', objId.toString());
+
+    // Buscar por _id (Profile)
+    const profile = await Profile.findById(objId);
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
 
-    // Calculamos follow y block en paralelo (más eficiente)
+    // Determinar si el usuario actual sigue o está bloqueado
     let isFollowing = false;
     let isBlocked = false;
 
