@@ -11,7 +11,7 @@ const r = Router({ mergeParams: true });
 r.post('/:id/like', requireAuth, async (req, res, next) => {
   try {
     const stream_uid = req.params.id;
-    const liked = await Like.findOne({ user_id: req.user.sub, stream_uid });
+    const liked = await Like.findOne({ user_id: req.user.sub, video_id: stream_uid });
     if (liked) return res.json({ liked: true });
     await Like.create({ user_id: req.user.sub, video_id: stream_uid });
     await Video.updateOne({ stream_uid }, { $inc: { likes_count: 1 } });
@@ -23,7 +23,7 @@ r.post('/:id/like', requireAuth, async (req, res, next) => {
 r.delete('/:id/like', requireAuth, async (req, res, next) => {
   try {
     const stream_uid = req.params.id;
-    const out = await Like.deleteOne({ user_id: req.user.sub, stream_uid });
+    const out = await Like.deleteOne({ user_id: req.user.sub, video_id: stream_uid });
     if (out.deletedCount) await Video.updateOne({ stream_uid }, { $inc: { likes_count: -1 } });
     const v = await Video.findOne({ stream_uid });
     res.json({ liked: false, likesCount: v?.likes_count || 0 });
