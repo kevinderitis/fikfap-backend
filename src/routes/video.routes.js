@@ -156,6 +156,8 @@ r.get('/for-you', async (req, res, next) => {
     // 👇 asumimos que req.user.sub es el _id del Profile logueado
     const currentProfileId = req.user?.sub || null;
 
+    console.log('[FOR-YOU] fetching for-you for user', currentProfileId);
+
     // 1) Videos públicos + autor (Profile)
     let videos = await Video.find({ 'privacy.is_private': false })
       .sort({ created_at: -1 })
@@ -218,7 +220,7 @@ r.get('/for-you', async (req, res, next) => {
         isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
       };
     });
-    
+
     console.log('[FOR-YOU] returning', enriched.length, 'videos for user', currentProfileId);
     console.log('[FOR-YOU] video IDs:', enriched.map(v => v._id.toString()).join(', '));
     console.log('[FOR-YOU] videos', enriched);
