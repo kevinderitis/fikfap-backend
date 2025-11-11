@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import Video from '../models/Video.js';
 import Like from '../models/Like.js';
+import Follow from '../models/Follow.js';
 import Hashtag from '../models/Hashtag.js';
 import { sanitizeText, extractMentionsAndHashtags } from '../utils/sanitize.js';
 
