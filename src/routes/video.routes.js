@@ -67,10 +67,6 @@ r.get('/following', requireAuth, async (req, res, next) => {
 //   } catch (e) { next(e); }
 // });
 
-import Like from '../models/Like.js';
-import Follow from '../models/Follow.js';
-import Video from '../models/Video.js';
-import Profile from '../models/Profile.js';
 
 r.get('/feed', async (req, res, next) => {
   try {
