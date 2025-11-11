@@ -152,9 +152,11 @@ r.get('/feed', async (req, res, next) => {
 r.get('/for-you', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
-    const currentUserId = req.user?.sub || null; // Profile._id del logueado (si lo tenés así)
 
-    // 1) Traemos los videos públicos + info básica del autor
+    // asumimos que req.user.sub es el _id del Profile del usuario logueado
+    const currentProfileId = req.user?.sub || null;
+
+    // 1) Traer videos públicos + autor (Profile)
     let videos = await Video.find({ 'privacy.is_private': false })
       .sort({ created_at: -1 })
       .limit(limit)
@@ -162,14 +164,17 @@ r.get('/for-you', async (req, res, next) => {
         path: 'user_id',
         select: 'username full_name avatar_url is_verified followers_count',
       })
-      .lean(); // objetos planos, no documentos Mongoose
+      .lean(); // objetos planos
 
     if (!videos.length) {
       return res.json({ videos: [], nextCursor: null });
     }
 
-    // 2) Armar listas de ids para consultas masivas
-    const videoIds = videos.map(v => v._id);
+    // 2) Sacar stream_uids y autores de esos videos
+    const streamUids = videos
+      .map(v => v.stream_uid)     // 👈 campo donde guardás el UID de Cloudflare
+      .filter(Boolean);
+
     const authorIds = videos
       .map(v => v.user_id?._id)
       .filter(Boolean);
@@ -177,44 +182,49 @@ r.get('/for-you', async (req, res, next) => {
     let likedSet = new Set();
     let followingSet = new Set();
 
-    if (currentUserId) {
-      // 3) Buscar likes del usuario en TODOS esos videos
+    if (currentProfileId) {
+      // 3) Traer likes del usuario para esos stream_uids
+      //    y follows del usuario hacia esos autores
       const [likes, follows] = await Promise.all([
         Like.find({
-          user_id: currentUserId,
-          video_id: { $in: videoIds },
-        }).select('video_id').lean(),
+          user_id: currentProfileId,
+          video_id: { $in: streamUids }, // 👈 acá matchea contra stream_uid
+        })
+          .select('video_id')
+          .lean(),
         Follow.find({
-          follower_id: currentUserId,
+          follower_id: currentProfileId,
           following_id: { $in: authorIds },
-        }).select('following_id').lean(),
+        })
+          .select('following_id')
+          .lean(),
       ]);
 
-      likedSet = new Set(likes.map(l => l.video_id.toString()));
-      followingSet = new Set(follows.map(f => f.following_id.toString()));
+      likedSet = new Set(likes.map(l => l.video_id));                // stream_uid strings
+      followingSet = new Set(follows.map(f => f.following_id.toString())); // Profile._id strings
     }
 
-    // 4) Enriquecer cada video con flags + renombrar autor
+    // 4) Enriquecer cada video con author + flags
     const enriched = videos.map(v => {
       const author = v.user_id || null;
-      const videoIdStr = v._id.toString();
+      const streamUid = v.stream_uid || null;
       const authorIdStr = author?._id?.toString();
 
       return {
         ...v,
-        author,                 // objeto Profile
-        user_id: undefined,     // para no exponer el nombre original si no querés
-        isLiked: likedSet.has(videoIdStr),
+        author,                 // 👈 Profile del creador
+        user_id: undefined,     // opcional: ocultás el nombre original si no querés exponerlo
+        isLiked: streamUid ? likedSet.has(streamUid) : false,
         isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
       };
     });
-
-    console.log('[FEED] returning', enriched.length, 'videos for user', currentUserId);
-    console.log('[FEED] video IDs:', enriched.map(v => v._id.toString()).join(', '));
-    console.log('[FEED] videos', enriched);
+    console.log('[FOR-YOU] returning', enriched.length, 'videos for user', currentProfileId);
+    console.log('[FOR-YOU] video IDs:', enriched.map(v => v._id.toString()).join(', '));
+    console.log('[FOR-YOU] videos', enriched);
+    
     res.json({
       videos: enriched,
-      nextCursor: null, // después lo podés cambiar a paginación con cursor
+      nextCursor: null, // después podés cambiar a cursor real
     });
   } catch (e) {
     console.error('[FEED] error:', e);
