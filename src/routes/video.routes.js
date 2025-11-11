@@ -59,33 +59,91 @@ r.get('/following', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-r.get('/feed', async (req, res, next) => {
-  try {
-    const limit = Math.min(Number(req.query.limit) || 20, 50);
-    const videos = await Video.find({ 'privacy.is_private': false }).sort({ created_at: -1 }).limit(limit);
-    res.json({ videos, nextCursor: null });
-  } catch (e) { next(e); }
-});
-
 // r.get('/feed', async (req, res, next) => {
 //   try {
 //     const limit = Math.min(Number(req.query.limit) || 20, 50);
-
-//     const videos = await Video.find({ 'privacy.is_private': false })
-//       .sort({ created_at: -1 })
-//       .limit(limit)
-//       .populate({
-//         path: 'user_id',
-//         select: 'username full_name avatar_url is_verified', // campos que querés traer del perfil
-//       })
-//       .lean();
-
+//     const videos = await Video.find({ 'privacy.is_private': false }).sort({ created_at: -1 }).limit(limit);
 //     res.json({ videos, nextCursor: null });
-//   } catch (e) {
-//     console.error('[FEED] error:', e);
-//     next(e);
-//   }
+//   } catch (e) { next(e); }
 // });
+
+import Like from '../models/Like.js';
+import Follow from '../models/Follow.js';
+import Video from '../models/Video.js';
+import Profile from '../models/Profile.js';
+
+r.get('/feed', async (req, res, next) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+    const currentUserId = req.user?.sub || null; // Profile._id del logueado (si lo tenés así)
+
+    // 1) Traemos los videos públicos + info básica del autor
+    let videos = await Video.find({ 'privacy.is_private': false })
+      .sort({ created_at: -1 })
+      .limit(limit)
+      .populate({
+        path: 'user_id',
+        select: 'username full_name avatar_url is_verified followers_count',
+      })
+      .lean(); // objetos planos, no documentos Mongoose
+
+    if (!videos.length) {
+      return res.json({ videos: [], nextCursor: null });
+    }
+
+    // 2) Armar listas de ids para consultas masivas
+    const videoIds = videos.map(v => v._id);
+    const authorIds = videos
+      .map(v => v.user_id?._id)
+      .filter(Boolean);
+
+    let likedSet = new Set();
+    let followingSet = new Set();
+
+    if (currentUserId) {
+      // 3) Buscar likes del usuario en TODOS esos videos
+      const [likes, follows] = await Promise.all([
+        Like.find({
+          user_id: currentUserId,
+          video_id: { $in: videoIds },
+        }).select('video_id').lean(),
+        Follow.find({
+          follower_id: currentUserId,
+          following_id: { $in: authorIds },
+        }).select('following_id').lean(),
+      ]);
+
+      likedSet = new Set(likes.map(l => l.video_id.toString()));
+      followingSet = new Set(follows.map(f => f.following_id.toString()));
+    }
+
+    // 4) Enriquecer cada video con flags + renombrar autor
+    const enriched = videos.map(v => {
+      const author = v.user_id || null;
+      const videoIdStr = v._id.toString();
+      const authorIdStr = author?._id?.toString();
+
+      return {
+        ...v,
+        author,                 // objeto Profile
+        user_id: undefined,     // para no exponer el nombre original si no querés
+        isLiked: likedSet.has(videoIdStr),
+        isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
+      };
+    });
+
+    console.log('[FEED] returning', enriched.length, 'videos for user', currentUserId);
+    console.log('[FEED] video IDs:', enriched.map(v => v._id.toString()).join(', '));
+    console.log('[FEED] videos', enriched);
+    res.json({
+      videos: enriched,
+      nextCursor: null, // después lo podés cambiar a paginación con cursor
+    });
+  } catch (e) {
+    console.error('[FEED] error:', e);
+    next(e);
+  }
+});
 
 r.get('/for-you', async (req, res, next) => {
   try {
