@@ -153,10 +153,10 @@ r.get('/for-you', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
 
-    // asumimos que req.user.sub es el _id del Profile del usuario logueado
+    // 👇 asumimos que req.user.sub es el _id del Profile logueado
     const currentProfileId = req.user?.sub || null;
 
-    // 1) Traer videos públicos + autor (Profile)
+    // 1) Videos públicos + autor (Profile)
     let videos = await Video.find({ 'privacy.is_private': false })
       .sort({ created_at: -1 })
       .limit(limit)
@@ -164,44 +164,44 @@ r.get('/for-you', async (req, res, next) => {
         path: 'user_id',
         select: 'username full_name avatar_url is_verified followers_count',
       })
-      .lean(); // objetos planos
+      .lean();
 
     if (!videos.length) {
       return res.json({ videos: [], nextCursor: null });
     }
 
-    // 2) Sacar stream_uids y autores de esos videos
+    // 2) Sacar stream_uids y authorIds
     const streamUids = videos
-      .map(v => v.stream_uid)     // 👈 campo donde guardás el UID de Cloudflare
+      .map(v => v.stream_uid)   // 👈 campo real
       .filter(Boolean);
 
     const authorIds = videos
-      .map(v => v.user_id?._id)
+      .map(v => v.user_id?._id || v.user_id) // soporta populate o no
       .filter(Boolean);
 
     let likedSet = new Set();
     let followingSet = new Set();
 
     if (currentProfileId) {
-      // 3) Traer likes del usuario para esos stream_uids
-      //    y follows del usuario hacia esos autores
+      // 3) Likes del profile logueado sobre esos stream_uids
+      //    y follows del profile logueado hacia esos autores
       const [likes, follows] = await Promise.all([
         Like.find({
-          user_id: currentProfileId,
-          video_id: { $in: streamUids }, // 👈 acá matchea contra stream_uid
+          user_id: currentProfileId,      // 👈 Profile._id
+          video_id: { $in: streamUids }, // 👈 stream_uid
         })
           .select('video_id')
           .lean(),
         Follow.find({
-          follower_id: currentProfileId,
+          follower_id: currentProfileId,  // 👈 Profile._id
           following_id: { $in: authorIds },
         })
           .select('following_id')
           .lean(),
       ]);
 
-      likedSet = new Set(likes.map(l => l.video_id));                // stream_uid strings
-      followingSet = new Set(follows.map(f => f.following_id.toString())); // Profile._id strings
+      likedSet = new Set(likes.map(l => l.video_id));                 // set de stream_uids
+      followingSet = new Set(follows.map(f => f.following_id.toString())); // set de Profile._id (string)
     }
 
     // 4) Enriquecer cada video con author + flags
@@ -212,25 +212,27 @@ r.get('/for-you', async (req, res, next) => {
 
       return {
         ...v,
-        author,                 // 👈 Profile del creador
-        user_id: undefined,     // opcional: ocultás el nombre original si no querés exponerlo
+        author,                 // perfil del creador
+        user_id: undefined,     // opcional: ocultar el campo original si no lo querés exponer
         isLiked: streamUid ? likedSet.has(streamUid) : false,
         isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
       };
     });
+    
     console.log('[FOR-YOU] returning', enriched.length, 'videos for user', currentProfileId);
     console.log('[FOR-YOU] video IDs:', enriched.map(v => v._id.toString()).join(', '));
     console.log('[FOR-YOU] videos', enriched);
-    
+
     res.json({
       videos: enriched,
-      nextCursor: null, // después podés cambiar a cursor real
+      nextCursor: null,
     });
   } catch (e) {
     console.error('[FEED] error:', e);
     next(e);
   }
 });
+
 
 r.get('/trending', async (req, res, next) => {
   try {
