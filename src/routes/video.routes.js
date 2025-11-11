@@ -149,7 +149,7 @@ r.get('/feed', async (req, res, next) => {
 //   } catch (e) { next(e); }
 // });
 
-r.get('/for-you', async (req, res, next) => {
+r.get('/for-you', requireAuth, async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
 
