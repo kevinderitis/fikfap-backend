@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 const CommentSchema = new mongoose.Schema({
-  video_id: { type: mongoose.Types.ObjectId, ref: 'Video', index: true },
+  video_id: { type: String },
   user_id: { type: mongoose.Types.ObjectId, ref: 'Profile', index: true },
   parent_comment_id: { type: mongoose.Types.ObjectId, ref: 'Comment', default: null },
   text: { type: String, maxlength: 1000 },
