@@ -19,7 +19,7 @@ r.post('/videos/:id/comments', requireAuth, async (req, res, next) => {
   try {
     const { text, parentCommentId=null } = req.body;
     const c = await Comment.create({ video_id: req.params.id, user_id: req.user.sub, text, parent_comment_id: parentCommentId });
-    await Video.updateOne({ _id: req.params.id }, { $inc: { comments_count: 1 } });
+    await Video.updateOne({ stream_uid: req.params.id }, { $inc: { comments_count: 1 } });
     if (parentCommentId) await Comment.updateOne({ _id: parentCommentId }, { $inc: { replies_count: 1 } });
     res.json({ comment: c });
   } catch (e) { next(e); }
@@ -30,7 +30,7 @@ r.delete('/comments/:id', requireAuth, async (req, res, next) => {
     const c = await Comment.findOne({ _id: req.params.id, user_id: req.user.sub });
     if (!c) return res.status(404).json({ error: 'Not found' });
     await Comment.deleteOne({ _id: c._id });
-    await Video.updateOne({ _id: c.video_id }, { $inc: { comments_count: -1 } });
+    await Video.updateOne({ stream_uid: c.video_id }, { $inc: { comments_count: -1 } });
     if (c.parent_comment_id) await Comment.updateOne({ _id: c.parent_comment_id }, { $inc: { replies_count: -1 } });
     res.json({ success: true });
   } catch (e) { next(e); }
