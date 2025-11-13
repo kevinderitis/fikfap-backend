@@ -6,18 +6,43 @@ import Video from '../models/Video.js';
 
 const r = Router();
 
+// r.get('/videos/:id/comments', async (req, res, next) => {
+//   try {
+//     const { page=1, limit=20, sortBy='recent' } = req.query;
+//     const sort = sortBy === 'popular' ? { likes_count: -1 } : { created_at: -1 };
+//     const comments = await Comment.find({ video_id: req.params.id, parent_comment_id: null }).sort(sort).limit(Math.min(limit, 50));
+//     res.json({ comments, nextPage: null });
+//   } catch (e) { next(e); }
+// });
+
 r.get('/videos/:id/comments', async (req, res, next) => {
   try {
-    const { page=1, limit=20, sortBy='recent' } = req.query;
-    const sort = sortBy === 'popular' ? { likes_count: -1 } : { created_at: -1 };
-    const comments = await Comment.find({ video_id: req.params.id, parent_comment_id: null }).sort(sort).limit(Math.min(limit, 50));
+    const { page = 1, limit = 20, sortBy = 'recent' } = req.query;
+
+    const sort = sortBy === 'popular'
+      ? { likes_count: -1 }
+      : { created_at: -1 };
+
+    const comments = await Comment.find({
+      video_id: req.params.id,
+      parent_comment_id: null
+    })
+      .sort(sort)
+      .limit(Math.min(limit, 50))
+      .populate('user_id', 'username avatar_url full_name is_verified');
+
+    console.log('[COMMENTS] fetched', comments.length, 'comments for video', req.params.id);
+    console.log('[COMMENTS] comments:', comments);
     res.json({ comments, nextPage: null });
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('[COMMENTS] error:', e);
+    next(e);
+  }
 });
 
 r.post('/videos/:id/comments', requireAuth, async (req, res, next) => {
   try {
-    const { text, parentCommentId=null } = req.body;
+    const { text, parentCommentId = null } = req.body;
     const c = await Comment.create({ video_id: req.params.id, user_id: req.user.sub, text, parent_comment_id: parentCommentId });
     await Video.updateOne({ stream_uid: req.params.id }, { $inc: { comments_count: 1 } });
     if (parentCommentId) await Comment.updateOne({ _id: parentCommentId }, { $inc: { replies_count: 1 } });
