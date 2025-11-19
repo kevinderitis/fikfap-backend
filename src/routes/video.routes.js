@@ -22,7 +22,7 @@ r.post('/upload', requireAuth, async (req, res, next) => {
     const sDesc = sanitizeText(description);
 
     const rawTags = sDesc.match(/#([a-zA-Z0-9_]+)/g) || [];
-    const tagNames = rawTags.map(tag => tag.slice(1).toLowerCase()); 
+    const tagNames = rawTags.map(tag => tag.slice(1).toLowerCase());
 
     console.log('[VIDEO UPLOAD] extracted tags:', tagNames);
 
@@ -61,32 +61,84 @@ r.post('/upload', requireAuth, async (req, res, next) => {
 r.get('/following', requireAuth, async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
-    const userId = req.user.sub;
+    const currentUserId = req.user.sub;
 
-    const Follow = (await import('../models/Follow.js')).default;
+    const follows = await Follow.find({ follower_id: currentUserId })
+      .select('following_id')
+      .lean();
 
-    const follows = await Follow.find({ follower_id: userId }).select('following_id');
     const followingIds = follows.map(f => f.following_id);
 
-    if (followingIds.length === 0) {
+    if (!followingIds.length) {
       return res.json({ videos: [], nextCursor: null });
     }
 
-    const videos = await Video.find({
+    let videos = await Video.find({
       user_id: { $in: followingIds },
       'privacy.is_private': false
     })
       .sort({ created_at: -1 })
-      .limit(limit);
+      .limit(limit)
+      .populate({
+        path: 'user_id',
+        select: 'username full_name avatar_url is_verified followers_count',
+      })
+      .lean();
 
-    res.json({ videos, nextCursor: null });
-  } catch (e) { next(e); }
+    if (!videos.length) {
+      return res.json({ videos: [], nextCursor: null });
+    }
+
+    const videoIds = videos.map(v => v._id);
+    const authorIds = videos
+      .map(v => v.user_id?._id)
+      .filter(Boolean);
+
+    let likedSet = new Set();
+    let followingSet = new Set();
+
+    const [likes, followsAgain] = await Promise.all([
+      Like.find({
+        user_id: currentUserId,
+        video_id: { $in: videoIds },
+      }).select('video_id').lean(),
+      Follow.find({
+        follower_id: currentUserId,
+        following_id: { $in: authorIds },
+      }).select('following_id').lean(),
+    ]);
+
+    likedSet = new Set(likes.map(l => l.video_id.toString()));
+    followingSet = new Set(followsAgain.map(f => f.following_id.toString()));
+
+    const enriched = videos.map(v => {
+      const author = v.user_id || null;
+      const videoIdStr = v._id.toString();
+      const authorIdStr = author?._id?.toString();
+
+      return {
+        ...v,
+        author,
+        user_id: undefined,
+        isLiked: likedSet.has(videoIdStr),
+        isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
+      };
+    });
+
+    res.json({
+      videos: enriched,
+      nextCursor: null,
+    });
+  } catch (e) {
+    console.error('[FOLLOWING FEED] error:', e);
+    next(e);
+  }
 });
 
 r.get('/feed', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
-    const currentUserId = req.user?.sub || null; 
+    const currentUserId = req.user?.sub || null;
 
     let videos = await Video.find({ 'privacy.is_private': false })
       .sort({ created_at: -1 })
@@ -133,8 +185,8 @@ r.get('/feed', async (req, res, next) => {
 
       return {
         ...v,
-        author,                
-        user_id: undefined, 
+        author,
+        user_id: undefined,
         isLiked: likedSet.has(videoIdStr),
         isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
       };
@@ -172,11 +224,11 @@ r.get('/for-you', requireAuth, async (req, res, next) => {
 
 
     const streamUids = videos
-      .map(v => v.stream_uid) 
+      .map(v => v.stream_uid)
       .filter(Boolean);
 
     const authorIds = videos
-      .map(v => v.user_id?._id || v.user_id) 
+      .map(v => v.user_id?._id || v.user_id)
       .filter(Boolean);
 
     let likedSet = new Set();
@@ -185,21 +237,21 @@ r.get('/for-you', requireAuth, async (req, res, next) => {
     if (currentProfileId) {
       const [likes, follows] = await Promise.all([
         Like.find({
-          user_id: currentProfileId,      
-          video_id: { $in: streamUids }, 
+          user_id: currentProfileId,
+          video_id: { $in: streamUids },
         })
           .select('video_id')
           .lean(),
         Follow.find({
-          follower_id: currentProfileId,  
+          follower_id: currentProfileId,
           following_id: { $in: authorIds },
         })
           .select('following_id')
           .lean(),
       ]);
 
-      likedSet = new Set(likes.map(l => l.video_id));                
-      followingSet = new Set(follows.map(f => f.following_id.toString())); 
+      likedSet = new Set(likes.map(l => l.video_id));
+      followingSet = new Set(follows.map(f => f.following_id.toString()));
     }
 
     const enriched = videos.map(v => {
@@ -209,8 +261,8 @@ r.get('/for-you', requireAuth, async (req, res, next) => {
 
       return {
         ...v,
-        author,                 
-        user_id: undefined,    
+        author,
+        user_id: undefined,
         isLiked: streamUid ? likedSet.has(streamUid) : false,
         isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
       };
