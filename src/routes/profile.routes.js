@@ -25,7 +25,7 @@ r.get('/id/:profile_id', async (req, res, next) => {
   try {
     const { profile_id } = req.params;
     console.log('[PROFILE] requested profile_id:', profile_id);
-    // Validar y convertir a ObjectId
+
     if (!mongoose.Types.ObjectId.isValid(profile_id)) {
       return res.status(400).json({ error: 'Invalid profile_id' });
     }
@@ -33,11 +33,9 @@ r.get('/id/:profile_id', async (req, res, next) => {
     const objId = new mongoose.Types.ObjectId(profile_id);
     console.log('[PROFILE] fetching by _id:', objId.toString());
 
-    // Buscar por _id (Profile)
     const profile = await Profile.findById(objId);
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
 
-    // Determinar si el usuario actual sigue o está bloqueado
     let isFollowing = false;
     let isBlocked = false;
 
@@ -84,7 +82,6 @@ r.get('/:username/videos', async (req, res, next) => {
 
 r.get('/:username/liked', async (req, res, next) => {
   try {
-    // Placeholder simple (requiere agregación Like->Video)
     res.json({ videos: [], nextPage: null });
   } catch (e) { next(e); }
 });

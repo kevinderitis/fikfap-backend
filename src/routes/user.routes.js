@@ -5,7 +5,6 @@ import Profile from '../models/Profile.js';
 
 const r = Router();
 
-// GET /users/:userId/follow/status - Verificar si sigues a un usuario
 r.get('/:userId/follow/status', requireAuth, async (req, res, next) => {
   try {
     const followerId = req.user.sub;
@@ -23,7 +22,6 @@ r.get('/:userId/follow/status', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /users/:userId/follow - Seguir a un usuario
 r.post('/:userId/follow', requireAuth, async (req, res, next) => {
   try {
     const followerId = req.user.sub;
@@ -33,7 +31,6 @@ r.post('/:userId/follow', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'No puedes seguirte a ti mismo' });
     }
 
-    // Verificar si ya sigue
     const existingFollow = await Follow.findOne({
       follower_id: followerId,
       following_id: followingId
@@ -43,13 +40,11 @@ r.post('/:userId/follow', requireAuth, async (req, res, next) => {
       return res.json({ success: true, message: 'Ya sigues a este usuario' });
     }
 
-    // Crear nuevo follow
     await Follow.create({
       follower_id: followerId,
       following_id: followingId
     });
 
-    // Actualizar contadores
     await Profile.findByIdAndUpdate(followingId, { $inc: { followers_count: 1 } });
     await Profile.findByIdAndUpdate(followerId, { $inc: { following_count: 1 } });
 
@@ -60,20 +55,17 @@ r.post('/:userId/follow', requireAuth, async (req, res, next) => {
   }
 });
 
-// DELETE /users/:userId/follow - Dejar de seguir a un usuario
 r.delete('/:userId/follow', requireAuth, async (req, res, next) => {
   try {
     const followerId = req.user.sub;
     const followingId = req.params.userId;
 
-    // Eliminar follow
     const result = await Follow.deleteOne({
       follower_id: followerId,
       following_id: followingId
     });
 
     if (result.deletedCount > 0) {
-      // Actualizar contadores
       await Profile.findByIdAndUpdate(followingId, { $inc: { followers_count: -1 } });
       await Profile.findByIdAndUpdate(followerId, { $inc: { following_count: -1 } });
     }

@@ -6,10 +6,8 @@ import Video from '../models/Video.js';
 
 const r = Router();
 
-// Ruta EXACTA: POST /_internal/webhooks/stream
 r.post('/webhooks/stream', express.raw({ type: 'application/json' }), async (req, res) => {
     try {
-        // guardamos el raw body para el verificador
         req.rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || '');
 
         // validar firma
@@ -18,7 +16,6 @@ r.post('/webhooks/stream', express.raw({ type: 'application/json' }), async (req
         //   return res.status(401).json({ ok: false });
         // }
 
-        // parsear JSON del raw body
         let payload = {};
         try { payload = JSON.parse(req.rawBody.toString('utf8') || '{}'); } catch { }
 
@@ -41,7 +38,6 @@ r.post('/webhooks/stream', express.raw({ type: 'application/json' }), async (req
         //         }
         //     }
         // }
-        // Actualizá tu video si corresponde
         await Video.findOneAndUpdate(
             { stream_uid: uid },
             {

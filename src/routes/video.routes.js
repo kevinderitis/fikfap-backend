@@ -150,14 +150,6 @@ r.get('/feed', async (req, res, next) => {
   }
 });
 
-// r.get('/for-you', async (req, res, next) => {
-//   try {
-//     const limit = Math.min(Number(req.query.limit) || 20, 50);
-//     const videos = await Video.find({ 'privacy.is_private': false }).sort({ created_at: -1 }).limit(limit);
-//     res.json({ videos, nextCursor: null });
-//   } catch (e) { next(e); }
-// });
-
 r.get('/for-you', requireAuth, async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
