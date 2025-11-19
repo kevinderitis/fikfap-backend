@@ -10,25 +10,53 @@ const r = Router();
 
 r.post('/upload', requireAuth, async (req, res, next) => {
   try {
-    const { description = '', hashtags = [], privacy_settings = {}, video_url, stream_uid } = req.body;
+    const {
+      description = '',
+      privacy_settings = {},
+      video_url,
+      stream_uid
+    } = req.body;
+
     console.log('Video upload', { user: req.user.sub, video_url, stream_uid });
+
     const sDesc = sanitizeText(description);
+
+    // ------------ EXTRAER HASHTAGS DEL TEXTO ------------
+    const rawTags = sDesc.match(/#([a-zA-Z0-9_]+)/g) || [];
+    const tagNames = rawTags.map(tag => tag.slice(1).toLowerCase()); // sin #
+
+    // ------------ GUARDAR/UPSERT DE CADA HASHTAG ------------
     const tagDocs = [];
-    for (const t of hashtags) {
-      const name = String(t).toLowerCase();
-      let doc = await Hashtag.findOneAndUpdate({ name }, { $setOnInsert: { name } }, { new: true, upsert: true });
+    for (const name of tagNames) {
+      const doc = await Hashtag.findOneAndUpdate(
+        { name },
+        { $setOnInsert: { name } },
+        { new: true, upsert: true }
+      );
       tagDocs.push(doc._id);
     }
+
+    // ------------ CREAR EL VIDEO ------------
     const v = await Video.create({
-      user_id: req.user.sub, video_url, stream_uid, description: sDesc, hashtags: tagDocs, privacy: {
+      user_id: req.user.sub,
+      video_url,
+      stream_uid,
+      description: sDesc,
+      hashtags: tagDocs,
+      privacy: {
         is_private: !!privacy_settings?.is_private,
         allow_comments: privacy_settings?.allow_comments ?? true,
         allow_duet: privacy_settings?.allow_duet ?? true,
         allow_stitch: privacy_settings?.allow_stitch ?? true
       }
     });
+
     res.json({ video: v });
-  } catch (e) { next(e); }
+
+  } catch (e) {
+    console.error('[VIDEO UPLOAD ERROR]', e);
+    next(e);
+  }
 });
 
 r.get('/following', requireAuth, async (req, res, next) => {
