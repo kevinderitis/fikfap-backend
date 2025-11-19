@@ -63,20 +63,15 @@ r.get('/following', requireAuth, async (req, res, next) => {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
     const userId = req.user.sub;
 
-    // Importar el modelo Follow (añade esto al inicio del archivo si no existe)
-    // import Follow from '../models/Follow.js';
     const Follow = (await import('../models/Follow.js')).default;
 
-    // Obtener IDs de usuarios que sigue
     const follows = await Follow.find({ follower_id: userId }).select('following_id');
     const followingIds = follows.map(f => f.following_id);
 
-    // Si no sigue a nadie, retornar array vacío
     if (followingIds.length === 0) {
       return res.json({ videos: [], nextCursor: null });
     }
 
-    // Obtener videos de usuarios seguidos
     const videos = await Video.find({
       user_id: { $in: followingIds },
       'privacy.is_private': false
@@ -88,21 +83,11 @@ r.get('/following', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// r.get('/feed', async (req, res, next) => {
-//   try {
-//     const limit = Math.min(Number(req.query.limit) || 20, 50);
-//     const videos = await Video.find({ 'privacy.is_private': false }).sort({ created_at: -1 }).limit(limit);
-//     res.json({ videos, nextCursor: null });
-//   } catch (e) { next(e); }
-// });
-
-
 r.get('/feed', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
-    const currentUserId = req.user?.sub || null; // Profile._id del logueado (si lo tenés así)
+    const currentUserId = req.user?.sub || null; 
 
-    // 1) Traemos los videos públicos + info básica del autor
     let videos = await Video.find({ 'privacy.is_private': false })
       .sort({ created_at: -1 })
       .limit(limit)
@@ -110,13 +95,12 @@ r.get('/feed', async (req, res, next) => {
         path: 'user_id',
         select: 'username full_name avatar_url is_verified followers_count',
       })
-      .lean(); // objetos planos, no documentos Mongoose
+      .lean();
 
     if (!videos.length) {
       return res.json({ videos: [], nextCursor: null });
     }
 
-    // 2) Armar listas de ids para consultas masivas
     const videoIds = videos.map(v => v._id);
     const authorIds = videos
       .map(v => v.user_id?._id)
@@ -142,7 +126,6 @@ r.get('/feed', async (req, res, next) => {
       followingSet = new Set(follows.map(f => f.following_id.toString()));
     }
 
-    // 4) Enriquecer cada video con flags + renombrar autor
     const enriched = videos.map(v => {
       const author = v.user_id || null;
       const videoIdStr = v._id.toString();
@@ -150,8 +133,8 @@ r.get('/feed', async (req, res, next) => {
 
       return {
         ...v,
-        author,                 // objeto Profile
-        user_id: undefined,     // para no exponer el nombre original si no querés
+        author,                
+        user_id: undefined, 
         isLiked: likedSet.has(videoIdStr),
         isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
       };
@@ -162,7 +145,7 @@ r.get('/feed', async (req, res, next) => {
     console.log('[FEED] videos', enriched);
     res.json({
       videos: enriched,
-      nextCursor: null, // después lo podés cambiar a paginación con cursor
+      nextCursor: null,
     });
   } catch (e) {
     console.error('[FEED] error:', e);
@@ -187,7 +170,6 @@ r.get('/for-you', requireAuth, async (req, res, next) => {
 
     console.log('[FOR-YOU] fetching for-you for user', currentProfileId);
 
-    // 1) Videos públicos + autor (Profile)
     let videos = await Video.find({ 'privacy.is_private': false })
       .sort({ created_at: -1 })
       .limit(limit)
@@ -201,41 +183,38 @@ r.get('/for-you', requireAuth, async (req, res, next) => {
       return res.json({ videos: [], nextCursor: null });
     }
 
-    // 2) Sacar stream_uids y authorIds
+
     const streamUids = videos
-      .map(v => v.stream_uid)   // 👈 campo real
+      .map(v => v.stream_uid) 
       .filter(Boolean);
 
     const authorIds = videos
-      .map(v => v.user_id?._id || v.user_id) // soporta populate o no
+      .map(v => v.user_id?._id || v.user_id) 
       .filter(Boolean);
 
     let likedSet = new Set();
     let followingSet = new Set();
 
     if (currentProfileId) {
-      // 3) Likes del profile logueado sobre esos stream_uids
-      //    y follows del profile logueado hacia esos autores
       const [likes, follows] = await Promise.all([
         Like.find({
-          user_id: currentProfileId,      // 👈 Profile._id
-          video_id: { $in: streamUids }, // 👈 stream_uid
+          user_id: currentProfileId,      
+          video_id: { $in: streamUids }, 
         })
           .select('video_id')
           .lean(),
         Follow.find({
-          follower_id: currentProfileId,  // 👈 Profile._id
+          follower_id: currentProfileId,  
           following_id: { $in: authorIds },
         })
           .select('following_id')
           .lean(),
       ]);
 
-      likedSet = new Set(likes.map(l => l.video_id));                 // set de stream_uids
-      followingSet = new Set(follows.map(f => f.following_id.toString())); // set de Profile._id (string)
+      likedSet = new Set(likes.map(l => l.video_id));                
+      followingSet = new Set(follows.map(f => f.following_id.toString())); 
     }
 
-    // 4) Enriquecer cada video con author + flags
     const enriched = videos.map(v => {
       const author = v.user_id || null;
       const streamUid = v.stream_uid || null;
@@ -243,8 +222,8 @@ r.get('/for-you', requireAuth, async (req, res, next) => {
 
       return {
         ...v,
-        author,                 // perfil del creador
-        user_id: undefined,     // opcional: ocultar el campo original si no lo querés exponer
+        author,                 
+        user_id: undefined,    
         isLiked: streamUid ? likedSet.has(streamUid) : false,
         isFollowingAuthor: authorIdStr ? followingSet.has(authorIdStr) : false,
       };
