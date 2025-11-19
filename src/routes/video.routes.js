@@ -21,11 +21,11 @@ r.post('/upload', requireAuth, async (req, res, next) => {
 
     const sDesc = sanitizeText(description);
 
-    // ------------ EXTRAER HASHTAGS DEL TEXTO ------------
     const rawTags = sDesc.match(/#([a-zA-Z0-9_]+)/g) || [];
-    const tagNames = rawTags.map(tag => tag.slice(1).toLowerCase()); // sin #
+    const tagNames = rawTags.map(tag => tag.slice(1).toLowerCase()); 
 
-    // ------------ GUARDAR/UPSERT DE CADA HASHTAG ------------
+    console.log('[VIDEO UPLOAD] extracted tags:', tagNames);
+
     const tagDocs = [];
     for (const name of tagNames) {
       const doc = await Hashtag.findOneAndUpdate(
@@ -36,7 +36,6 @@ r.post('/upload', requireAuth, async (req, res, next) => {
       tagDocs.push(doc._id);
     }
 
-    // ------------ CREAR EL VIDEO ------------
     const v = await Video.create({
       user_id: req.user.sub,
       video_url,
