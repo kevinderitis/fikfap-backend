@@ -125,6 +125,9 @@ r.get('/following', requireAuth, async (req, res, next) => {
       };
     });
 
+    console.log('[FOLLOWING FEED] returning', enriched.length, 'videos');
+    console.log('[FOLLOWING FEED] enriched sample:', enriched[0]);
+
     res.json({
       videos: enriched,
       nextCursor: null,
