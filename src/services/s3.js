@@ -7,6 +7,6 @@ const s3 = new S3Client({ region: process.env.AWS_REGION, credentials: {
 }});
 
 export async function presign({ bucket, key, contentType, expires=300 }) {
-  const cmd = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType, ACL: 'public-read' });
+  const cmd = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType });
   return getSignedUrl(s3, cmd, { expiresIn: expires });
 }

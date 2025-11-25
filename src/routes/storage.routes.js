@@ -23,7 +23,6 @@ r.get('/s3/presign', requireAuth, async (req, res, next) => {
     const key = `${req.user.sub}/${Date.now()}.${ext}`;
     let url = null;
 
-    // 🔥 try/catch interno para loguear errores del presign
     try {
       url = await presign({
         bucket,
