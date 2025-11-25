@@ -97,8 +97,8 @@ r.get('/:id', async (req, res, next) => {
         res.json({
             image: img,
             author: img.user_id,
-            isLiked: false,      // futuro: LikeImage
-            isBookmarked: false, // futuro: BookmarkImage
+            isLiked: false,      
+            isBookmarked: false,
         });
     } catch (e) {
         console.error('[IMAGE GET ERROR]', e);

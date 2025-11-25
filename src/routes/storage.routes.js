@@ -12,7 +12,7 @@ function toEnvBucketKey(name) {
 r.get('/s3/presign', requireAuth, async (req, res, next) => {
   try {
     const { bucket, ext = 'jpg' } = req.query;
-    if (!['avatars', 'covers', 'chat-media', 'thumbnails', 'content-images'].includes(bucket)) throw new Error('Invalid bucket');
+    if (!['app-avatars', 'app-covers', 'app-chat-media', 'app-thumbnails', 'app-content-media'].includes(bucket)) throw new Error('Invalid bucket');
     const key = `${req.user.sub}/${Date.now()}.${ext}`;
     const envKey = toEnvBucketKey(bucket);
     const bucketName = process.env[envKey] || process.env.S3_AVATARS_BUCKET;
